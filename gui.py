@@ -1,3 +1,4 @@
+import os
 import sys
 
 from PIL import Image
@@ -5,30 +6,13 @@ from PIL import Image
 from functions import *
 
 from PyQt5.QtCore import pyqtSlot, Qt
-from PyQt5.QtGui import QPixmap, QImage, QIcon
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QFileDialog, QLabel
 
 
-def pil2pixmap(img):
-    """ Convert Pillow Object to Pixmap """
-    if img.mode == "RGB":
-        r, g, b = img.split()
-        img = Image.merge("RGB", (b, g, r))
-    elif img.mode == "RGBA":
-        r, g, b, a = img.split()
-        img = Image.merge("RGBA", (b, g, r, a))
-    elif img.mode == "L":
-        img = img.convert("RGBA")
-
-    # Convert image to RGBA if not already done
-    img2 = img.convert("RGBA")
-    data = img2.tobytes("raw", "RGBA")
-    qim = QImage(data, img.size[0], img.size[1], QImage.Format_ARGB32)
-    pixmap = QPixmap.fromImage(qim)
-    return pixmap
-
-
 class Image2ASCII(QWidget):
+    """A PyQt5 GUI that converts an image file to ASCII art"""
+
     def __init__(self):
         super().__init__()
 
@@ -70,13 +54,13 @@ class Image2ASCII(QWidget):
     def getImage(self):
         # Get image file from file dialogue
         options = QFileDialog.Options()
-        self.path, _ = QFileDialog.getOpenFileName(self, 'Select an Image to Convert', '',
-                                                   'Images (*.png *.jpeg *.jpg)', options=options)
-        if (not self.path):
+        filename, _ = QFileDialog.getOpenFileName(self, 'Select an Image to Convert', os.getenv('HOME'),
+                                                  'Images (*.png *.jpeg *.jpg)', options=options)
+        if (not filename):
             return
 
         # Create PIL image object
-        self.image = resize_image(Image.open(self.path))
+        self.image = resize_image(Image.open(filename))
 
         # Set QLabel to a pixmap made of the PIL image object
         self.pixmap = pil2pixmap(self.image)
@@ -90,8 +74,6 @@ class Image2ASCII(QWidget):
     def convert(self, new_width=100):
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
-        filename = self.path.split('/')[-1].split('.')[-2]
-
         # Convert image to ascii
         new_image_data = pixels_to_ascii(grayify(self.image))
 
@@ -99,6 +81,16 @@ class Image2ASCII(QWidget):
         pixel_count = len(new_image_data)
         ascii_image = "\n".join([new_image_data[index:(index+new_width)]
                                  for index in range(0, pixel_count, new_width)])
+
+        # Get save file path/name
+        options = QFileDialog.Options()
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Save ASCII Art", os.getenv('HOME'), "Text File (*.txt)", options=options)
+
+        if (not filename):
+            QApplication.restoreOverrideCursor()
+            return
+
         # Save result
         save(filename, ascii_image)
 
