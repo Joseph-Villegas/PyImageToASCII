@@ -2,7 +2,8 @@
 Filename: functions.py
 Abstract: This python file contains all methods required, 
           in order, to convert an image file to an ASCII 
-          art piece in a text file
+          art piece in a text file and a method to 
+          convert a PIL image object to a Pixmap
 
           Converting an image to ASCII art:
           1. Resize the image to the desired width maintaing the original image's aspect ratio
@@ -13,6 +14,9 @@ Abstract: This python file contains all methods required,
 
 # importing image class from PIL package
 from PIL import Image
+
+# importing classes from PyQt5 package
+from PyQt5.QtGui import QPixmap, QImage
 
 # ascii characters used to build the output text
 ASCII_CHARS = ["@", "#", "S", "%", "?", "*", "+", ";", ":", ",", "."]
@@ -42,5 +46,24 @@ def pixels_to_ascii(image):
 
 def save(filename, ascii_image):
     """ save ascii image to a text file """
-    with open(f"{filename}.txt", "w") as f:
+    with open(filename, "w") as f:
         f.write(ascii_image)
+
+
+def pil2pixmap(img):
+    """ convert PIL object to Pixmap """
+    if img.mode == "RGB":
+        r, g, b = img.split()
+        img = Image.merge("RGB", (b, g, r))
+    elif img.mode == "RGBA":
+        r, g, b, a = img.split()
+        img = Image.merge("RGBA", (b, g, r, a))
+    elif img.mode == "L":
+        img = img.convert("RGBA")
+
+    # convert image to RGBA if not already done
+    img2 = img.convert("RGBA")
+    data = img2.tobytes("raw", "RGBA")
+    qim = QImage(data, img.size[0], img.size[1], QImage.Format_ARGB32)
+    pixmap = QPixmap.fromImage(qim)
+    return pixmap
